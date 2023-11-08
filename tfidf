@@ -1,0 +1,81 @@
+import os
+from collections import defaultdict
+import math
+import numpy as np
+import pandas as pd
+
+inverted_index = defaultdict(list)
+
+path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\dokimi"
+os.chdir(path)
+words_set = set()
+
+document_count = {}  # Dictionary to store the count of documents each word appears in
+
+for file in os.listdir(path):
+    file_path = os.path.join(path, file)
+    with open(file_path, 'r') as folder:
+        text = folder.read()
+        dictionary = text.split()
+        words_set = words_set.union(set(dictionary))
+        # Create a dictionary to store word counts for each document
+        count = {}
+
+        for word in dictionary:
+            count[word] = count.get(word, 0) + 1
+
+        # Update the inverted index with word counts for the current document
+        for word, count in count.items():
+            inverted_index[word].append((file, count))
+
+                # Update the document count for the current word
+            if word in document_count:
+                document_count[word].add(file)
+            else:
+                document_count[word] = {file}
+
+#print(inverted_index)
+
+
+# Calculate IDF for each word and store it in a dictionary
+idf_values = {}
+for word, documents in document_count.items():
+    idf = math.log10((len([f for f in os.listdir(path)])) / len(documents))
+    idf_values[word] = idf
+
+# Create a DataFrame with IDF values
+idf_df = pd.DataFrame.from_dict(idf_values, orient='index', columns=['IDF'])
+
+# Now you have a DataFrame with the IDF values for each word
+print(idf_df)
+
+# Create a dictionary to store TF values for each word in each document
+tf_values = {}
+for word, occurrences in inverted_index.items():
+    for document, count in occurrences:
+        if document in tf_values:
+            tf_values[document][word] = 1 + math.log10(count)
+        else:
+            tf_values[document] = {word: 1 + math.log10(count)}
+
+# Create a DataFrame where rows are document titles and columns are words with their TF values
+tf_df = pd.DataFrame.from_dict(tf_values, orient='index')
+tf_df.fillna(0, inplace=True)  # Fill missing values with 0
+
+# Now you have a DataFrame with TF values calculated as 1 + log(term_freq) for each word in each document
+print(tf_df)
+
+# Iterate through the TF and IDF DataFrames to calculate TF-IDF
+tfidf_df = tf_df.copy()  # Create a copy of the TF DataFrame
+
+# Multiply each TF value by the corresponding IDF value
+for column in tfidf_df.columns:
+    tfidf_df[column] = tfidf_df[column] * idf_df.loc[column, 'IDF']
+
+# Now, tfidf_df contains the TF-IDF values
+print(tfidf_df)
+
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\tfidf.csv"
+
+# Save the DataFrame to a CSV file
+tfidf_df.to_csv(csv_file_path, index=False)
