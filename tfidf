@@ -79,3 +79,41 @@ csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\tfidf.csv"
 
 # Save the DataFrame to a CSV file
 tfidf_df.to_csv(csv_file_path, index=False)
+
+=========================================== NEW =========================================================
+query_path = r"C:\Users\user\PycharmProjects\pythonProject\Queries_20"
+
+with open(query_path, 'r') as file:
+    text = file.read()
+
+words = text.split()
+unique_words = OrderedDict.fromkeys(words)
+unique_words_df = pd.DataFrame({'Words': [word.upper() for word in unique_words.keys()]})
+#print((unique_words_df))
+
+words = list(inverted_index.keys())
+"""
+# Create a Pandas DataFrame with the words
+query_words = pd.DataFrame({'Words': words})
+query_words[word] = query_words[word].apply(lambda word: 1 if word in unique_words_df else 0)
+"""
+word_presence = {}
+for word in inverted_index.keys():
+    word_presence[word] = 1 if word in unique_words_df else 0
+
+# Create a DataFrame to represent the presence of words in the queries
+presence_df = pd.DataFrame({'Word': list(word_presence.keys()), 'Exists_in_Query': list(word_presence.values())})
+
+# Display the DataFrame
+print(unique_words_df)
+#print(presence_df)
+csv_file_path = r"C:\Users\user\PycharmProjects\pythonProject\query2.csv"
+
+# Save the DataFrame to a CSV file
+presence_df.to_csv(csv_file_path, index=False)
+query_vector = unique_words_df * idf_df
+query_vector = pd.DataFrame(query_vector, columns=unique_words_df.columns)
+#print(query_vector)
+
+query_weights = query_vector.to_numpy()
+document_weights = tfidf_df.to_numpy()
