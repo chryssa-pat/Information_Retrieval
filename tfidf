@@ -4,9 +4,11 @@ import math
 import numpy as np
 import pandas as pd
 
+
+
 inverted_index = defaultdict(list)
 
-path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\dokimi"
+path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\docs"
 os.chdir(path)
 words_set = set()
 
@@ -48,6 +50,10 @@ idf_df = pd.DataFrame.from_dict(idf_values, orient='index', columns=['IDF'])
 
 # Now you have a DataFrame with the IDF values for each word
 print(idf_df)
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\idf.csv"
+
+# Save the DataFrame to a CSV file
+idf_df.to_csv(csv_file_path, index=False)
 
 # Create a dictionary to store TF values for each word in each document
 tf_values = {}
@@ -80,40 +86,83 @@ csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\tfidf.csv"
 # Save the DataFrame to a CSV file
 tfidf_df.to_csv(csv_file_path, index=False)
 
-=========================================== NEW =========================================================
-query_path = r"C:\Users\user\PycharmProjects\pythonProject\Queries_20"
 
+query_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\Queries_20"
+
+# Read questions from the file
 with open(query_path, 'r') as file:
-    text = file.read()
+    questions = file.readlines()
 
-words = text.split()
-unique_words = OrderedDict.fromkeys(words)
-unique_words_df = pd.DataFrame({'Words': [word.upper() for word in unique_words.keys()]})
-#print((unique_words_df))
 
-words = list(inverted_index.keys())
-"""
-# Create a Pandas DataFrame with the words
-query_words = pd.DataFrame({'Words': words})
-query_words[word] = query_words[word].apply(lambda word: 1 if word in unique_words_df else 0)
-"""
-word_presence = {}
-for word in inverted_index.keys():
-    word_presence[word] = 1 if word in unique_words_df else 0
+# Create a list of words from the inverted index
+all_words = list(inverted_index.keys())
 
-# Create a DataFrame to represent the presence of words in the queries
-presence_df = pd.DataFrame({'Word': list(word_presence.keys()), 'Exists_in_Query': list(word_presence.values())})
+# Create a DataFrame with zeros
+df = pd.DataFrame(0, index=range(len(questions)), columns=all_words)
 
-# Display the DataFrame
-print(unique_words_df)
-#print(presence_df)
-csv_file_path = r"C:\Users\user\PycharmProjects\pythonProject\query2.csv"
+# Iterate through questions and update the DataFrame
+for i, question in enumerate(questions):
+    words = question.upper().split()
+    for word in words:
+        if word in inverted_index:
+            df.at[i, word] = 1
+
+# Now, df is the DataFrame where each row represents a question, and columns represent words with values 1 or 0
+print(df)
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\query.csv"
 
 # Save the DataFrame to a CSV file
-presence_df.to_csv(csv_file_path, index=False)
-query_vector = unique_words_df * idf_df
-query_vector = pd.DataFrame(query_vector, columns=unique_words_df.columns)
-#print(query_vector)
+df.to_csv(csv_file_path, index=False)
 
-query_weights = query_vector.to_numpy()
-document_weights = tfidf_df.to_numpy()
+idf_multiplied_df = df.multiply(idf_df['IDF'], axis=1)
+
+print(idf_multiplied_df)
+
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\queryweights.csv"
+
+# Save the DataFrame to a CSV file
+idf_multiplied_df.to_csv(csv_file_path, index=False)
+
+# Calculate the Euclidean norm for each row
+euclidean_norms = np.linalg.norm(tfidf_df.values, axis=1)
+
+# Create a DataFrame with the Euclidean norm values
+euclidean_norms_df = pd.DataFrame({'Euclidean Norm': euclidean_norms}, index=tfidf_df.index)
+
+# Now, euclidean_norms_df contains the Euclidean norm values for each row in tfidf_df
+print(euclidean_norms_df)
+
+# Calculate the Euclidean norm for each row
+euclidean_norms_idf = np.linalg.norm(idf_multiplied_df.values, axis=1)
+
+# Create a DataFrame with the Euclidean norm values
+euclidean_norms_idf_df = pd.DataFrame({'Euclidean Norm': euclidean_norms_idf}, index=idf_multiplied_df.index)
+
+# Now, euclidean_norms_idf_df contains the Euclidean norm values for each row in idf_multiplied_df
+print(euclidean_norms_idf_df)
+
+dot_products = np.dot(idf_multiplied_df.values, tfidf_df.values.T)
+
+# Create a DataFrame with the dot product values
+dot_product_df = pd.DataFrame(dot_products, columns=tfidf_df.index, index=idf_multiplied_df.index)
+
+# Now, dot_product_df contains the dot product values for each pair of rows between idf_multiplied_df and tfidf_df
+print(dot_product_df)
+
+result_df = euclidean_norms_idf_df.values @ euclidean_norms_df.values.T
+
+# Create a DataFrame with the result
+result_df = pd.DataFrame(result_df, index=euclidean_norms_idf_df.index, columns=euclidean_norms_df.index)
+
+# Now, result_df contains the result of multiplying euclidean_norms_idf_df with the transpose of euclidean_norms_df
+print(result_df)
+
+division_result_df = dot_product_df.div(result_df)
+
+# Now, division_result_df contains the element-wise division results
+print(division_result_df)
+
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\result.csv"
+
+# Save the DataFrame to a CSV file
+division_result_df.to_csv(csv_file_path, index=False)
