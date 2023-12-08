@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import sys
 from matplotlib import pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 inverted_index = defaultdict(list)
 
 path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\docs"
@@ -158,63 +159,72 @@ print(result_df)
 
 division_result_df = dot_product_df.div(result_df)
 
-# Now, division_result_df contains the element-wise division results
+
+# Sort columns by converting column names to integers
+division_result_df = division_result_df[sorted(division_result_df.columns, key=lambda x: int(x))]
+
+# Save the sorted DataFrame to a CSV file
+csv_file_path2 = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\cosine_similarity.csv"
+division_result_df.to_csv(csv_file_path2, index=False)
 print(division_result_df)
+def sort_queries_all_docs(df):
+    sorted_queries = pd.DataFrame(index=df.index, columns=['Sorted_Doc_IDs'])
 
-csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\result.csv"
+    for query in df.index:
+        sorted_values = df.loc[query].sort_values(ascending=False)
+        sorted_doc_ids = list(sorted_values.index)
 
-# Save the DataFrame to a CSV file
-division_result_df.to_csv(csv_file_path, index=False)
-# Rank documents based on cosine similarity
+        sorted_queries.loc[query] = [sorted_doc_ids]
 
-def plot_PR_curve(P_Q, R_Q, figsize=(6, 6)):
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
-    plt.plot(R_Q, P_Q, linestyle='--', marker='o', color='k', mfc='r')
-    plt.xlim([0, 1.1])
-    plt.ylim([0, 1.1])
-    ax.set_aspect('equal', 'box')
-    plt.title('Precision-Recall Curve')
+    return sorted_queries
+
+# Sorting queries based on cosine similarity
+sorted_queries_all_docs_df = sort_queries_all_docs(division_result_df)
+
+# Display the result
+print(sorted_queries_all_docs_df)
+
+# Read relevant documents from file
+relevant_documents_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\Relevant_20"
+relevant_documents_dict = {}
+
+# Read relevant documents from file
+with open(relevant_documents_path, 'r') as rel_file:
+    for query_id, line in enumerate(rel_file):
+        rel_docs = [f"{int(doc):05d}" for doc in line.strip().split()]
+        relevant_documents_dict[query_id] = rel_docs
+
+# Initialize a list to store precision and recall values for each query
+precision_recall_list = []
+for query_id, row in sorted_queries_all_docs_df.iterrows():
+    sorted_doc_ids = row['Sorted_Doc_IDs']
+
+    # Retrieve relevant documents for the current query
+    relevant_docs = relevant_documents_dict.get(query_id, [])
+
+    # Compute relevance function X_Q (indexing starts with zero)
+    X_Q = np.zeros(len(sorted_doc_ids), dtype=bool)
+    for i, doc_id in enumerate(sorted_doc_ids):
+        if doc_id in relevant_docs:
+            X_Q[i] = True
+
+    # Compute precision and recall values (indexing starts with zero)
+    M = len(relevant_docs)
+    P_Q = np.zeros(len(sorted_doc_ids))
+    R_Q = np.zeros(len(sorted_doc_ids))
+    for i, doc_id in enumerate(sorted_doc_ids):
+        P_Q[i] = np.sum(X_Q[:i+1]) / (i+1) if (i+1) > 0 else 0
+        R_Q[i] = np.sum(X_Q[:i+1]) / M
+
+    precision_recall_list.append((P_Q, R_Q))
+
+# Iterate through precision_recall_list and plot PR curves for each query
+for query_id, (precision_values, recall_values) in enumerate(precision_recall_list, start=1):
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    plt.plot(recall_values, precision_values, linestyle='--', marker='o', color='k', mfc='r')
+    plt.title(f'Precision-Recall Curve - Query {query_id}')
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.grid()
     plt.tight_layout()
-    return fig, ax
-# Read relevant documents from file
-relevant_documents_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\Relevant_20"
-relevant_documents = {}
-
-with open(relevant_documents_path, 'r') as rel_file:
-    for line in rel_file:
-        line = line.strip().split()
-        query_id = int(line[0])
-        rel_docs = [int(doc) for doc in line[1:]]
-        relevant_documents[query_id] = rel_docs
-
-# Initialize lists to store precision and recall values
-precision_values = []
-recall_values = []
-
-# Rank documents based on cosine similarity
-for query_index, row in division_result_df.iterrows():
-    top_documents = row.nlargest(20).index  # You can adjust the number of top documents to retrieve
-    query_id = query_index + 1
-
-    # Retrieve relevant documents for the current query
-    relevant_docs = relevant_documents.get(query_id, [])
-
-    # Calculate precision and recall
-    true_positives = len(set(top_documents) & set(relevant_docs))
-    false_positives = len(set(top_documents) - set(relevant_docs))
-    false_negatives = len(set(relevant_docs) - set(top_documents))
-
-    precision = true_positives / (true_positives + false_positives) if true_positives + false_positives > 0 else 0
-    recall = true_positives / (true_positives + false_negatives) if true_positives + false_negatives > 0 else 0
-
-    precision_values.append(precision)
-    recall_values.append(recall)
-
-    print(f"Query {query_id}: Precision - {precision:.4f}, Recall - {recall:.4f}")
-
-# Plot PR curve
-fig, ax = plot_PR_curve(precision_values, recall_values)
-plt.show()
+    plt.show()
