@@ -194,45 +194,39 @@ with open(relevant_documents_path, 'r') as rel_file:
         rel_docs = [f"{int(doc):05d}" for doc in line.strip().split()]
         relevant_documents_dict[query_id] = rel_docs
 
-#Initialize a list to store precision and recall values for each query
-precision_recall_list = []
+top_k = 20
+sorted_queries_all_docs_df['Sorted_Doc_IDs'] = sorted_queries_all_docs_df['Sorted_Doc_IDs'].apply(lambda x: x[:top_k])
 
-# Iterate through queries
-for query_id, row in sorted_queries_all_docs_df.iterrows():
-    sorted_doc_ids = row['Sorted_Doc_IDs']
+# Now, 'Top_K_Doc_IDs' contains the top k elements for each row
+print(sorted_queries_all_docs_df)
+# Convert all elements in the 'Sorted_Doc_IDs' column to integers
+sorted_queries_all_docs_df['Sorted_Doc_IDs'] = sorted_queries_all_docs_df['Sorted_Doc_IDs'].apply(lambda x: sorted([int(doc_id) for doc_id in x]))
+print(sorted_queries_all_docs_df)
+precision_list = []
+recall_list = []
 
-    # Retrieve relevant documents for the current query
-    relevant_docs = relevant_documents_dict.get(query_id, [])
+# Assuming sorted_queries_all_docs_df['Sorted_Doc_IDs'] contains lists of document IDs
+# Replace it with the actual column name in your DataFrame
+for i, doc_ids in enumerate(sorted_queries_all_docs_df['Sorted_Doc_IDs']):
+    retrieved_count = 0
+    precision_list_query = []  # List to store precision for each document ID
+    recall_list_query = []  # List to store recall for each document ID
+    print(doc_ids)
+    for doc_id in doc_ids:
 
-    # Compute relevance function X_Q (indexing starts with zero)
-    X_Q = np.zeros(len(sorted_doc_ids), dtype=bool)
-    for i, doc_id in enumerate(sorted_doc_ids):
-        if doc_id in relevant_docs:
-            X_Q[i] = True
+        retrieved_count += 1
 
-    # Compute precision and recall values (indexing starts with zero)
-    M = len(relevant_docs)
-    P_Q = np.cumsum(X_Q) / np.arange(1, len(sorted_doc_ids) + 1)
-    R_Q = np.cumsum(X_Q) / M
+        precision = retrieved_count / doc_id
+        recall = retrieved_count / top_k
 
-    precision_recall_list.append((P_Q, R_Q, sorted_doc_ids, relevant_docs))
-# Plot precision-recall curve for each query
-for query_id, (precision_values, recall_values, sorted_doc_ids, relevant_docs) in enumerate(precision_recall_list,
-                                                                                            start=1):
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        precision_list_query.append(precision)
+        print(precision_list_query)
+        recall_list_query.append(recall)
+        print(recall_list_query)
 
-    # Plot dots only for documents that are both in sorted and relevant
-    common_docs = set(sorted_doc_ids) & set(relevant_docs)
-    common_indices = [sorted_doc_ids.index(doc) for doc in common_docs]
-
-    plt.scatter(np.array(recall_values)[common_indices], np.array(precision_values)[common_indices],
-                marker='o', color='k', label='Common Documents')
-
-    plt.title(f'Precision-Recall Curve - Query {query_id}')
+    # Plot the precision-recall diagram for each query
+    plt.plot(recall_list_query, precision_list_query, label=f'Document ID in Query {i+1}')
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.ylim([0, 1])
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
+    plt.title(f'Top-{top_k} Precision-Recall Diagram for Query {i+1}')
     plt.show()
