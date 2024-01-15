@@ -235,4 +235,5 @@ for query_id, relevant_docs_set in relevant_docs.items():
     plt.xlabel("Recall")
     plt.ylabel("Precision")
     plt.grid(True)
+    plt.legend()
     plt.show()
