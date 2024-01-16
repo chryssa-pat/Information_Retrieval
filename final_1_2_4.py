@@ -141,6 +141,7 @@ cosine_similarity = dot_product.div(norm_product)
 print(cosine_similarity)
 
 # Question 4
+# Precision - Recall and MAP Metrics
 # Sort each column and replace values with doc IDs
 sorted_doc_ids = cosine_similarity.apply(lambda col: col.sort_values(ascending=False).index)
 csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject1\cosine_similarity.csv"
@@ -159,7 +160,7 @@ with open(file_path, 'r') as file:
         # Assign this set to the corresponding query ID
         relevant_docs[query_id] = doc_ids
 
-def calculate_precision_recall(relevant_docs, retrieved_docs):
+def calculate_metrics(relevant_docs, retrieved_docs):
     ret_count = 0
     rel_count = 0
     precisions = []
@@ -175,11 +176,27 @@ def calculate_precision_recall(relevant_docs, retrieved_docs):
             precisions.append(precision)
             recall = rel_count / len(relevant_docs)
             recalls.append(recall)
-    return precisions, recalls
+    avg_precision = sum(precisions) / len(relevant_docs)
+
+    return precisions, recalls, avg_precision
+
+def calculate_area(recalls, precisions):
+    area = 0.0
+    for i in range(1, len(recalls)):
+        # Calculate the area of the trapezoid
+        width = recalls[i] - recalls[i-1]
+        height = (precisions[i] + precisions[i-1]) / 2
+        area += width * height
+    return area
 
 colbert_path = r"C:\Users\me\PycharmProjects\pythonProject1\colbert_result.csv"
 # Read the ColBERT results into a DataFrame
 query_docs = {}
+queries = 20
+avg_precisions = []
+avg_precisions_colbert = []
+areas_cosine_similarity = []
+areas_colbert = []
 
 with open(colbert_path, 'r') as csvfile:
     csvreader = csv.reader(csvfile)
@@ -195,8 +212,15 @@ with open(colbert_path, 'r') as csvfile:
 for query_id, relevant_docs_set in relevant_docs.items():
     retrieved_docs_list = retrieved_docs.get(query_id, [])
     retrieved_docs_list_colbert = query_docs.get(query_id, [])
-    precisions, recalls = calculate_precision_recall(relevant_docs_set, retrieved_docs_list)
-    precisions_colbert, recalls_colbert = calculate_precision_recall(relevant_docs_set, retrieved_docs_list_colbert)
+    precisions, recalls, avg_precision = calculate_metrics(relevant_docs_set, retrieved_docs_list)
+    avg_precisions.append(avg_precision)
+    map_values = sum(avg_precisions) / queries
+
+    precisions_colbert, recalls_colbert, avg_precision_colbert = calculate_metrics(relevant_docs_set, retrieved_docs_list_colbert)
+    avg_precisions_colbert.append(avg_precision_colbert)
+    map_values_colbert = sum(avg_precisions_colbert) / queries
+
+
     plt.figure()
     plt.plot(recalls, precisions, marker='o', label = 'Cosine Similarity')
     plt.plot(recalls_colbert, precisions_colbert, marker='o', label = 'ColBERT')
@@ -206,3 +230,23 @@ for query_id, relevant_docs_set in relevant_docs.items():
     plt.grid(True)
     plt.legend()
     plt.show()
+
+    # After calculating precisions and recalls for each query
+    area_cosine_similarity = calculate_area(recalls, precisions)
+    areas_cosine_similarity.append(area_cosine_similarity)
+    area_colbert = calculate_area(recalls_colbert, precisions_colbert)
+    areas_colbert.append(area_colbert)
+
+    # Now you can print or plot the AUC values
+    print(f"Area for Cosine Similarity (Query {query_id + 1}): {area_cosine_similarity}")
+    print(f"Area for ColBERT (Query {query_id + 1}): {area_colbert}")
+
+print(f"MAP Metric for Cosine Similarity: {map_values}")
+print(f"MAP Metric for ColBERT: {map_values_colbert}")
+
+# Calculate the mean area to compare the general efficiency of both models
+mean_area_cosine_similarity = sum(areas_cosine_similarity) / queries
+mean_area_colbert = sum(areas_colbert) / queries
+
+print(f"Mean Area under Precision-Recall Curve for Cosine Similarity: {mean_area_cosine_similarity}")
+print(f"Mean Area under Precision-Recall Curve for ColBERT: {mean_area_colbert}")
