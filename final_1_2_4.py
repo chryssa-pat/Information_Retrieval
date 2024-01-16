@@ -180,6 +180,12 @@ def calculate_metrics(relevant_docs, retrieved_docs):
 
     return precisions, recalls, avg_precision
 
+def precision_at_k(relevant_docs, retrieved_docs, k):
+    if len(retrieved_docs) > k:
+        retrieved_docs = retrieved_docs[:k]
+    relevant_count = sum([1 for doc in retrieved_docs if doc in relevant_docs])
+    return relevant_count / k
+
 def calculate_area(recalls, precisions):
     area = 0.0
     for i in range(1, len(recalls)):
@@ -191,8 +197,9 @@ def calculate_area(recalls, precisions):
 
 colbert_path = r"C:\Users\me\PycharmProjects\pythonProject1\colbert_result.csv"
 # Read the ColBERT results into a DataFrame
-query_docs = {}
 queries = 20
+top_k = 400
+query_docs = {}
 avg_precisions = []
 avg_precisions_colbert = []
 areas_cosine_similarity = []
@@ -220,6 +227,13 @@ for query_id, relevant_docs_set in relevant_docs.items():
     avg_precisions_colbert.append(avg_precision_colbert)
     map_values_colbert = sum(avg_precisions_colbert) / queries
 
+    # Calculate precision@k for Cosine Similarity and ColBERT
+    precision_at_k_cosine = precision_at_k(relevant_docs_set, retrieved_docs_list, top_k)
+    precision_at_k_colbert = precision_at_k(relevant_docs_set, retrieved_docs_list_colbert, top_k)
+
+    # Print or store these values for comparison
+    print(f"Precision@{top_k} for Cosine Similarity (Query {query_id + 1}): {precision_at_k_cosine}")
+    print(f"Precision@{top_k} for ColBERT (Query {query_id + 1}): {precision_at_k_colbert}")
 
     plt.figure()
     plt.plot(recalls, precisions, marker='o', label = 'Cosine Similarity')
