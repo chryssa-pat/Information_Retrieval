@@ -43,7 +43,7 @@ for file in os.listdir(path):
                 
 inverted_index_csv = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\inverted_index.csv" 
 
-# Print the inverted index for each word without changing the overall format
+# Print the inverted index 
 for word, documents in inverted_index.items():
     print(f"{word}: {documents}")
 
