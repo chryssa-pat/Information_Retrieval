@@ -41,7 +41,7 @@ for file in os.listdir(path):
             else:
                 document_count[word] = {file}
                 
-inverted_index_csv = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\inverted_index.csv"  # Replace with the desired output CSV file path
+inverted_index_csv = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\inverted_index.csv" 
 
 # Print the inverted index for each word without changing the overall format
 for word, documents in inverted_index.items():
