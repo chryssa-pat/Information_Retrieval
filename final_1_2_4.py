@@ -8,20 +8,23 @@ import re
 from matplotlib import pyplot as plt
 import csv
 
-# Question 1
+# defaultdict to store the inverted index
 inverted_index = defaultdict(list)
-path = r"C:\Users\me\PycharmProjects\pythonProject1\docs"
-os.chdir(path)
-words_set = set()
-# Dictionary to store the count of documents each word appears in
+
+# Dictionary to store the  documents each word appears in
 document_count = {}
+
+path = (r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\docs")
+os.chdir(path)
+
 
 for file in os.listdir(path):
     file_path = os.path.join(path, file)
     with open(file_path, 'r') as folder:
         text = folder.read()
+
         dictionary = text.split()
-        words_set = words_set.union(set(dictionary))
+
         # Create a dictionary to store word counts for each document
         count = {}
 
@@ -31,13 +34,27 @@ for file in os.listdir(path):
         # Update the inverted index with word counts for the current document
         for word, count in count.items():
             inverted_index[word].append((file, count))
+
             # Update the document count for the current word
             if word in document_count:
                 document_count[word].add(file)
             else:
                 document_count[word] = {file}
-print(inverted_index)
+                
+inverted_index_csv = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\inverted_index.csv"  # Replace with the desired output CSV file path
 
+# Print the inverted index for each word without changing the overall format
+for word, documents in inverted_index.items():
+    print(f"{word}: {documents}")
+
+# Save the inverted index into a CSV file
+with open(inverted_index_csv, 'w', newline='', encoding='utf-8') as csvfile:
+    csv_writer = csv.writer(csvfile)
+    csv_writer.writerow(['Word', 'Documents'])
+
+    for word, documents in inverted_index.items():
+        csv_writer.writerow([word, documents])
+        
 # Question 2
 # Calculate IDF for each word and store it in a dictionary
 idf = {}
