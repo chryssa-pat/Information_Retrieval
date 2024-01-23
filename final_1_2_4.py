@@ -8,6 +8,8 @@ import re
 from matplotlib import pyplot as plt
 import csv
 
+# Question 1
+
 # defaultdict to store the inverted index
 inverted_index = defaultdict(list)
 
@@ -40,10 +42,9 @@ for file in os.listdir(path):
                 document_count[word].add(file)
             else:
                 document_count[word] = {file}
-                
-inverted_index_csv = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\inverted_index.csv" 
+inverted_index_csv = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\inverted_index.csv"
 
-# Print the inverted index 
+# Print the inverted index
 for word, documents in inverted_index.items():
     print(f"{word}: {documents}")
 
@@ -54,7 +55,7 @@ with open(inverted_index_csv, 'w', newline='', encoding='utf-8') as csvfile:
 
     for word, documents in inverted_index.items():
         csv_writer.writerow([word, documents])
-        
+
 # Question 2
 # Calculate IDF for each word and store it in a dictionary
 idf = {}
@@ -65,7 +66,7 @@ for word, documents in document_count.items():
 # Create a DataFrame with IDF values
 idf = pd.DataFrame.from_dict(idf, orient='index', columns=['IDF'])
 
-csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject1\idf.csv"
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\idf.csv"
 # Save the DataFrame to a CSV file
 idf.to_csv(csv_file_path, index=False)
 
@@ -82,7 +83,7 @@ for word, occurrences in inverted_index.items():
 tf = pd.DataFrame.from_dict(tf, orient='index')
 tf.fillna(0, inplace=True)  # Fill missing values with 0
 
-csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject1\doc_tf.csv"
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\doc_tf.csv"
 # Save the DataFrame to a CSV file
 tf.to_csv(csv_file_path, index=False)
 
@@ -92,11 +93,11 @@ tfidf = tf.copy()
 for column in tfidf.columns:
     tfidf[column] = tfidf[column] * idf.loc[column, 'IDF']
 
-csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject\doc_weights.csv"
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\doc_weights.csv"
 # Save the DataFrame to a CSV file
 tfidf.to_csv(csv_file_path, index=False)
 
-query_path = r"C:\Users\me\PycharmProjects\pythonProject1\Queries_20"
+query_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\Queries_20"
 # Read questions from the file
 with open(query_path, 'r') as file:
     questions = file.readlines()
@@ -124,12 +125,12 @@ for i, question in enumerate(questions):
             df.at[i, word] = 1 + math.log10(count)
 
 df = df.fillna(0)
-csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject1\query_tf.csv"
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\query_tf.csv"
 # Save the DataFrame to a CSV file
 df.to_csv(csv_file_path, index=False)
 
 query_tfidf = df.multiply(idf['IDF'], axis=1)
-csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject1\query_weights.csv"
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\query_weights.csv"
 # Save the DataFrame to a CSV file
 query_tfidf.to_csv(csv_file_path, index=False)
 
@@ -159,16 +160,35 @@ print(cosine_similarity)
 
 # Question 4
 # Precision - Recall and MAP Metrics
+#cosine similarity
 # Sort each column and replace values with doc IDs
 sorted_doc_ids = cosine_similarity.apply(lambda col: col.sort_values(ascending=False).index)
-csv_file_path = r"C:\Users\me\PycharmProjects\pythonProject1\cosine_similarity.csv"
+csv_file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\cosine_similarity.csv"
 # Save the DataFrame to a CSV file
 sorted_doc_ids.to_csv(csv_file_path, index=False)
 # Convert document IDs to integers and get the retrieved docs
 retrieved_docs = {query_id: [int(doc_id) for doc_id in doc_ids] for query_id, doc_ids in sorted_doc_ids.items()}
 
+#colbert
+colbert_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\colbert_result.csv"
+query_docs = {}
+# Read the ColBERT results into a DataFrame
+with open(colbert_path, 'r') as csvfile:
+    csvreader = csv.reader(csvfile)
+    next(csvreader)  # Skip the header row
+
+    for query_id, row in enumerate(csvreader):
+        # Parse the string representation of the list into an actual list
+        doc_ids = ast.literal_eval(row[1])
+
+        # Convert each element in the list to an integer
+        doc_ids = [int(id) for id in doc_ids]
+
+        # Ensure doc_ids is a list of integers
+        if isinstance(doc_ids, list) and all(isinstance(id, int) for id in doc_ids):
+            query_docs[query_id] = doc_ids
 # Get the relevant docs
-file_path = r"C:\Users\me\PycharmProjects\pythonProject1\Relevant_20"
+file_path = r"C:\Users\chryssa_pat\PycharmProjects\pythonProject\Relevant_20"
 relevant_docs = {}
 with open(file_path, 'r') as file:
     for query_id, line in enumerate(file):
@@ -197,12 +217,6 @@ def calculate_metrics(relevant_docs, retrieved_docs):
 
     return precisions, recalls, avg_precision
 
-def precision_at_k(relevant_docs, retrieved_docs, k):
-    if len(retrieved_docs) > k:
-        retrieved_docs = retrieved_docs[:k]
-    relevant_count = sum([1 for doc in retrieved_docs if doc in relevant_docs])
-    return relevant_count / k
-
 def calculate_area(recalls, precisions):
     area = 0.0
     for i in range(1, len(recalls)):
@@ -212,49 +226,39 @@ def calculate_area(recalls, precisions):
         area += width * height
     return area
 
-colbert_path = r"C:\Users\me\PycharmProjects\pythonProject1\colbert_result.csv"
-# Read the ColBERT results into a DataFrame
+
+def precision_at_k(relevant_docs, retrieved_docs, k):
+    if len(retrieved_docs) > k:
+        retrieved_docs = retrieved_docs[:k]
+    relevant_count = sum([1 for doc in retrieved_docs if doc in relevant_docs])
+    return relevant_count / k
+
+
 queries = 20
 top_k = 400
-query_docs = {}
 avg_precisions = []
 avg_precisions_colbert = []
 areas_cosine_similarity = []
 areas_colbert = []
-
-with open(colbert_path, 'r') as csvfile:
-    csvreader = csv.reader(csvfile)
-    next(csvreader)  # Skip the header row
-
-    for query_id, row in enumerate(csvreader):
-        # Parse the string representation of the list into an actual list
-        doc_ids = ast.literal_eval(row[1])
-        # Ensure doc_ids is a list and contains integers
-        if isinstance(doc_ids, list) and all(isinstance(id, int) for id in doc_ids):
-            query_docs[query_id] = doc_ids
+precisions_at_k_colbert = []
+precisions_at_k_cosine = []
 
 for query_id, relevant_docs_set in relevant_docs.items():
     retrieved_docs_list = retrieved_docs.get(query_id, [])
-    retrieved_docs_list_colbert = query_docs.get(query_id, [])
     precisions, recalls, avg_precision = calculate_metrics(relevant_docs_set, retrieved_docs_list)
     avg_precisions.append(avg_precision)
     map_values = sum(avg_precisions) / queries
 
-    precisions_colbert, recalls_colbert, avg_precision_colbert = calculate_metrics(relevant_docs_set, retrieved_docs_list_colbert)
-    avg_precisions_colbert.append(avg_precision_colbert)
-    map_values_colbert = sum(avg_precisions_colbert) / queries
 
-    # Calculate precision@k for Cosine Similarity and ColBERT
+    # Calculate precision@k for Cosine Similarity
     precision_at_k_cosine = precision_at_k(relevant_docs_set, retrieved_docs_list, top_k)
-    precision_at_k_colbert = precision_at_k(relevant_docs_set, retrieved_docs_list_colbert, top_k)
+    precisions_at_k_cosine.append(precision_at_k_cosine)
 
     # Print or store these values for comparison
     print(f"Precision@{top_k} for Cosine Similarity (Query {query_id + 1}): {precision_at_k_cosine}")
-    print(f"Precision@{top_k} for ColBERT (Query {query_id + 1}): {precision_at_k_colbert}")
 
     plt.figure()
     plt.plot(recalls, precisions, marker='o', label = 'Cosine Similarity')
-    plt.plot(recalls_colbert, precisions_colbert, marker='o', label = 'ColBERT')
     plt.title(f"Precision - Recall for Query {query_id + 1}")
     plt.xlabel("Recall")
     plt.ylabel("Precision")
@@ -265,12 +269,39 @@ for query_id, relevant_docs_set in relevant_docs.items():
     # After calculating precisions and recalls for each query
     area_cosine_similarity = calculate_area(recalls, precisions)
     areas_cosine_similarity.append(area_cosine_similarity)
+
+    # Now you can print or plot the AUC valuesD
+    print(f"Area for Cosine Similarity (Query {query_id + 1}): {area_cosine_similarity}")
+
+for query_id, relevant_docs_set in relevant_docs.items():
+    retrieved_docs_list_colbert = query_docs.get(query_id, [])
+    precisions_colbert, recalls_colbert, avg_precision_colbert = calculate_metrics(relevant_docs_set, retrieved_docs_list_colbert)
+    avg_precisions_colbert.append(avg_precision_colbert)
+    map_values_colbert = sum(avg_precisions_colbert) / queries
+
+    # Calculate precision@k for ColBERT
+    precision_at_k_colbert = precision_at_k(relevant_docs_set, retrieved_docs_list_colbert, top_k)
+    precisions_at_k_colbert.append(precision_at_k_colbert)
+
+    # Print or store these values for comparison
+    print(f"Precision@{top_k} for ColBERT (Query {query_id + 1}): {precision_at_k_colbert}")
+
+    plt.figure()
+    plt.plot(recalls_colbert, precisions_colbert, marker='o', label = 'ColBERT', color = 'orange')
+    plt.title(f"Precision - Recall for Query {query_id + 1}")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    # After calculating precisions and recalls for each query
     area_colbert = calculate_area(recalls_colbert, precisions_colbert)
     areas_colbert.append(area_colbert)
 
     # Now you can print or plot the AUC values
-    print(f"Area for Cosine Similarity (Query {query_id + 1}): {area_cosine_similarity}")
     print(f"Area for ColBERT (Query {query_id + 1}): {area_colbert}")
+
 
 print(f"MAP Metric for Cosine Similarity: {map_values}")
 print(f"MAP Metric for ColBERT: {map_values_colbert}")
@@ -281,3 +312,9 @@ mean_area_colbert = sum(areas_colbert) / queries
 
 print(f"Mean Area under Precision-Recall Curve for Cosine Similarity: {mean_area_cosine_similarity}")
 print(f"Mean Area under Precision-Recall Curve for ColBERT: {mean_area_colbert}")
+
+mean_precision_at_k_cosine_similarity = sum(precisions_at_k_cosine)/queries
+mean_precision_at_k_colbert = sum(precisions_at_k_colbert)/queries
+
+print(f"Mean Value of Precision@{top_k} for Cosine Similarity: {mean_precision_at_k_cosine_similarity}")
+print(f"Mean Value of Precision@{top_k} for ColBERT: {mean_precision_at_k_colbert}")
